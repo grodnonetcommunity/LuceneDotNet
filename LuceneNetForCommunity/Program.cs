@@ -1,7 +1,10 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using JetBrains.Annotations;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
+using Lucene.Net.QueryParsers.Classic;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 
@@ -51,7 +54,27 @@ namespace LuceneNetForCommunity
                     };
                     ixw.AddDocument(document2);
                     ixw.Commit();
+
+                    var searchQuery = "1";
+                    var query = new MultiFieldQueryParser(LuceneVersion.LUCENE_48, new[] {"id"}, analyzer).Parse(searchQuery);
+                    using (var ixr = DirectoryReader.Open(directory))
+                    {
+                        var searcher = new IndexSearcher(ixr);
+                        var hits = searcher.Search(query, 10);
+                        PrintHits(hits, searcher);
+                    }
+
                 }
+            }
+        }
+
+        private static void PrintHits(TopDocs docs, IndexSearcher searcher)
+        {
+            foreach (var scoreDoc in docs.ScoreDocs)
+            {
+                Console.WriteLine(scoreDoc.Doc);
+                var doc = searcher.Doc(scoreDoc.Doc);
+                Console.WriteLine($"DocId = {scoreDoc.Doc}, Id = {doc.Get("id")}, Score = {scoreDoc.Score}");
             }
         }
     }
