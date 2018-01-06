@@ -46,7 +46,10 @@ namespace LuceneNetForCommunity
                     {
                         new StringField("id", "2", Field.Store.YES),
                         new StringField("notTokenized", "Will not be tokenized", Field.Store.YES),
-                        new TextField("content", "Hello world 2", Field.Store.YES),
+                        new TextField("content", "Hello world 1", Field.Store.YES)
+                        {
+                            Boost = 1.0f
+                        },
                         new Int32Field("intValue", 33, Field.Store.YES),
                         new Int32Field("intNotStoredValue", 32, Field.Store.NO),
                         new NumericDocValuesField("docValue", 65)
@@ -56,7 +59,7 @@ namespace LuceneNetForCommunity
                     ixw.Commit();
 
                     var searchQuery = "1";
-                    var query = new MultiFieldQueryParser(LuceneVersion.LUCENE_48, new[] {"id"}, analyzer).Parse(searchQuery);
+                    var query = new MultiFieldQueryParser(LuceneVersion.LUCENE_48, new[] {"id", "content"}, analyzer).Parse(searchQuery);
                     using (var ixr = DirectoryReader.Open(directory))
                     {
                         var searcher = new IndexSearcher(ixr);
