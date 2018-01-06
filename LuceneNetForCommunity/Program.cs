@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using JetBrains.Annotations;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 
@@ -23,15 +24,14 @@ namespace LuceneNetForCommunity
             {
                 System.IO.Directory.Delete(directoryName, true);
             }
-            
+
             using (Directory directory = new MMapDirectory("index"))
             using (var analyzer = new Lucene.Net.Analysis.Standard.StandardAnalyzer(LuceneVersion.LUCENE_48))
             {
                 var config = new IndexWriterConfig(LuceneVersion.LUCENE_48, analyzer);
                 using (var ixw = new IndexWriter(directory, config))
                 {
-                    
-                    IList<Document> documents = new List<Document>(2000);    
+                    IList<Document> documents = new List<Document>(2000);
                     for (int i = 0; i < 1000; i++)
                     {
                         var document = new Document
@@ -44,10 +44,9 @@ namespace LuceneNetForCommunity
                             new NumericDocValuesField("docValue", 64)
                         };
                         documents.Add(document);
-                        
                     }
-                    
-                    
+
+
                     for (int i = 0; i < 1000; i++)
                     {
                         var document2 = new Document
@@ -58,16 +57,18 @@ namespace LuceneNetForCommunity
                             new Int32Field("intValue", 33, Field.Store.YES),
                             new Int32Field("intNotStoredValue", 32, Field.Store.NO),
                             new NumericDocValuesField("docValue", 65)
-
                         };
                         documents.Add(document2);
-                        
                     }
+
                     ixw.AddDocuments(documents);
+                    ixw.Commit();
+
+                    ixw.DeleteDocuments(NumericRangeQuery.NewInt32Range("intValue", 33, 33, true, true));
                     ixw.Commit();
                 }
             }
-            
+
             Console.WriteLine(sw.ElapsedMilliseconds);
             Console.ReadKey();
         }
