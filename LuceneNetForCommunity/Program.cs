@@ -37,7 +37,9 @@ namespace LuceneNetForCommunity
                         new TextField("content", "Hello world", Field.Store.YES),
                         new Int32Field("intValue", 32, Field.Store.YES),
                         new Int32Field("intNotStoredValue", 32, Field.Store.NO),
-                        new NumericDocValuesField("docValue", 64)
+                        new NumericDocValuesField("docValue", 64),
+                        new Field("dateTime", DateTools.DateToString(new DateTime(2018, 1, 1), DateTools.Resolution.SECOND), Field.Store.YES, Field.Index.ANALYZED),
+                        new StringField("dateTime", DateTools.DateToString(new DateTime(2017, 1, 1), DateTools.Resolution.SECOND), Field.Store.YES)
                     };
 
                     ixw.AddDocument(document);
@@ -52,14 +54,14 @@ namespace LuceneNetForCommunity
                         },
                         new Int32Field("intValue", 33, Field.Store.YES),
                         new Int32Field("intNotStoredValue", 32, Field.Store.NO),
-                        new NumericDocValuesField("docValue", 65)
-                        
+                        new NumericDocValuesField("docValue", 65),
+                        new StringField("dateTime", DateTools.DateToString(new DateTime(2018, 1, 1), DateTools.Resolution.SECOND), Field.Store.YES)
                     };
                     ixw.AddDocument(document2);
                     ixw.Commit();
 
-                    var searchQuery = "1";
-                    var query = new MultiFieldQueryParser(LuceneVersion.LUCENE_48, new[] {"id", "content"}, analyzer).Parse(searchQuery);
+                    var searchQuery = "id:{1 TO 4}^3 AND content:Hallo~0.75 AND dateTime:[20160101000000 TO 20180101000000]";
+                    var query = new MultiFieldQueryParser(LuceneVersion.LUCENE_48, new[] {"id"}, analyzer).Parse(searchQuery);
                     using (var ixr = DirectoryReader.Open(directory))
                     {
                         var searcher = new IndexSearcher(ixr);
