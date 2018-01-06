@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using JetBrains.Annotations;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
-using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 
@@ -30,7 +30,8 @@ namespace LuceneNetForCommunity
                 var config = new IndexWriterConfig(LuceneVersion.LUCENE_48, analyzer);
                 using (var ixw = new IndexWriter(directory, config))
                 {
-
+                    
+                    IList<Document> documents = new List<Document>(2000);    
                     for (int i = 0; i < 1000; i++)
                     {
                         var document = new Document
@@ -42,10 +43,11 @@ namespace LuceneNetForCommunity
                             new Int32Field("intNotStoredValue", 32, Field.Store.NO),
                             new NumericDocValuesField("docValue", 64)
                         };
-
-                        ixw.AddDocument(document);
+                        documents.Add(document);
+                        
                     }
-
+                    
+                    
                     for (int i = 0; i < 1000; i++)
                     {
                         var document2 = new Document
@@ -58,9 +60,11 @@ namespace LuceneNetForCommunity
                             new NumericDocValuesField("docValue", 65)
 
                         };
-                        ixw.AddDocument(document2);
-                        ixw.Commit();
+                        documents.Add(document2);
+                        
                     }
+                    ixw.AddDocuments(documents);
+                    ixw.Commit();
                 }
             }
             
