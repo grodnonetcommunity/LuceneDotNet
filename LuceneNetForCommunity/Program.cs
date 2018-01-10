@@ -4,9 +4,15 @@ using JetBrains.Annotations;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers.Classic;
+using Lucene.Net.QueryParsers.Surround.Query;
 using Lucene.Net.Search;
+using Lucene.Net.Spatial.Prefix;
+using Lucene.Net.Spatial.Prefix.Tree;
+using Lucene.Net.Spatial.Queries;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
+using Spatial4n.Core.Context;
+using Spatial4n.Core.Distance;
 
 namespace LuceneNetForCommunity
 {
@@ -22,6 +28,13 @@ namespace LuceneNetForCommunity
             {
                 System.IO.Directory.Delete(directoryName, true);
             }
+
+            var context = SpatialContext.GEO;
+            int maxLevels = 11;
+
+            SpatialPrefixTree grid = new GeohashPrefixTree(context, maxLevels);
+            var strategy = new RecursivePrefixTreeStrategy(grid, "geo");
+            
             
             using (Directory directory = new MMapDirectory("index"))
             using (var analyzer = new Lucene.Net.Analysis.Standard.StandardAnalyzer(LuceneVersion.LUCENE_48))
@@ -30,6 +43,8 @@ namespace LuceneNetForCommunity
                 using (var ixw = new IndexWriter(directory, config))
                 {
 
+                    var shape = context.MakePoint(1, 1);
+                    var geoFields = strategy.CreateIndexableFields(shape);
                     var document = new Document
                     {
                         new StringField("id", "1", Field.Store.YES),
@@ -39,8 +54,13 @@ namespace LuceneNetForCommunity
                         new Int32Field("intNotStoredValue", 32, Field.Store.NO),
                         new NumericDocValuesField("docValue", 64),
                         new Field("dateTime", DateTools.DateToString(new DateTime(2018, 1, 1), DateTools.Resolution.SECOND), Field.Store.YES, Field.Index.ANALYZED),
-                        new StringField("dateTime", DateTools.DateToString(new DateTime(2017, 1, 1), DateTools.Resolution.SECOND), Field.Store.YES)
+                        new StringField("dateTime", DateTools.DateToString(new DateTime(2017, 1, 1), DateTools.Resolution.SECOND), Field.Store.YES),
+                       
                     };
+                    foreach (var geoField in geoFields)
+                    {
+                        document.Add(geoField);
+                    }
 
                     ixw.AddDocument(document);
 
@@ -57,18 +77,24 @@ namespace LuceneNetForCommunity
                         new NumericDocValuesField("docValue", 65),
                         new StringField("dateTime", DateTools.DateToString(new DateTime(2018, 1, 1), DateTools.Resolution.SECOND), Field.Store.YES)
                     };
+                    foreach (var geoField in geoFields)
+                    {
+                        document2.Add(geoField);
+                    }
                     ixw.AddDocument(document2);
                     ixw.Commit();
 
-                    var searchQuery = "id:{1 TO 4}^3 AND content:Hallo~0.75 AND dateTime:[20160101000000 TO 20180101000000]";
-                    var query = new MultiFieldQueryParser(LuceneVersion.LUCENE_48, new[] {"id"}, analyzer).Parse(searchQuery);
+                    var spatialArgs = new SpatialArgs(SpatialOperation.Intersects,
+                        context.MakeCircle(1, 1, DistanceUtils.Dist2Degrees(1, DistanceUtils.EARTH_MEAN_RADIUS_KM)));
+                    var spatialQuery = strategy.MakeQuery(spatialArgs);
+                    var actualQuery = new BooleanQuery();
+                    actualQuery.Add(spatialQuery, Occur.MUST);
                     using (var ixr = DirectoryReader.Open(directory))
                     {
                         var searcher = new IndexSearcher(ixr);
-                        var hits = searcher.Search(query, 10);
+                        var hits = searcher.Search(actualQuery, 10);
                         PrintHits(hits, searcher);
                     }
-
                 }
             }
         }
