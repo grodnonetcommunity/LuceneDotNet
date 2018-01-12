@@ -84,11 +84,8 @@ namespace LuceneNetForCommunity
                     ixw.AddDocument(document2);
                     ixw.Commit();
 
-                    var spatialArgs = new SpatialArgs(SpatialOperation.Intersects,
-                        context.MakeCircle(1, 1, DistanceUtils.Dist2Degrees(1, DistanceUtils.EARTH_MEAN_RADIUS_KM)));
-                    var spatialQuery = strategy.MakeQuery(spatialArgs);
                     var actualQuery = new BooleanQuery();
-                    actualQuery.Add(spatialQuery, Occur.MUST);
+                    actualQuery.Add(NumericRangeQuery.NewInt32Range("intValue", 32, 32, true, true), Occur.MUST);
                     using (var ixr = DirectoryReader.Open(directory))
                     {
                         var searcher = new IndexSearcher(ixr);
